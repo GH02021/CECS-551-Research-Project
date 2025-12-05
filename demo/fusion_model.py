@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-'''
+
 def data_create(csvfile: str):
     df = pd.read_csv(csvfile)
 
@@ -33,54 +33,12 @@ def data_create(csvfile: str):
     y_test  = y[split_idx:]
 
     return X_train, y_train, X_test, y_test
-    '''
 
 
-#RNN data
-def data_create(csvfile: str, window: int = 5):
-    df = pd.read_csv(csvfile)
-
-    # 假设前两列是 Date, Ticker，最后一列是 label_up_next
-    target_col = df.columns[-1]
-    ignore_cols = [df.columns[0], df.columns[1], target_col]
-
-    feature_cols = [c for c in df.columns if c not in ignore_cols]
-
-    # 按 Ticker + Date 排序，保证时间顺序
-    df = df.sort_values([df.columns[0], df.columns[1]])  # ["Date", "Ticker"] 也可以手写
-
-    X_list, y_list = [], []
-
-    # 按 ticker 分组，避免不同股票之间串窗
-    for _, g in df.groupby(df.columns[0]):  # 按 Ticker 分组
-        g = g.reset_index(drop=True)
-
-        feats = g[feature_cols].astype("float32").values  # (n_days, F)
-        labels = g[target_col].astype("float32").values   # (n_days,)
-
-        if len(g) < window:
-            continue  # 太短就跳过
-
-        # 滑动窗口：每次取 window 天的序列
-        for i in range(window - 1, len(g)):
-            X_seq = feats[i-window+1 : i+1]   # (window, F)
-            y = labels[i]                     # 用窗口最后一天的 label_up_next
-            X_list.append(X_seq)
-            y_list.append(y)
-
-    X = np.stack(X_list).astype("float32")          # (N_samples, window, F)
-    y = np.array(y_list, dtype="float32").reshape(-1, 1)
-
-    # 按时间顺序切 7:3（此时样本已经是按时间排好的）
-    split_idx = int(len(X) * 0.7)
-    X_train, X_test = X[:split_idx], X[split_idx:]
-    y_train, y_test = y[:split_idx], y[split_idx:]
-
-    return X_train, y_train, X_test, y_test
 
 #define the model
 #MLP model
-'''
+
 class Fusionnet(nn.Module):
     def __init__(self, in_dim, hidden=64):
         super().__init__()
@@ -97,7 +55,7 @@ class Fusionnet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-'''
+
 
 
 '''#CNN model
@@ -143,30 +101,6 @@ class Fusionnet(nn.Module):
         x = self.classifier(x)
 
         return x'''
-
-
-#RNN model
-class Fusionnet(nn.Module):
-    def __init__(self, feature_dim, hidden=64):
-        super().__init__()
-        self.rnn = nn.LSTM(
-            input_size=feature_dim,  # = F
-            hidden_size=hidden,
-            num_layers=1,
-            batch_first=True,
-        )
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.3),
-            nn.Linear(hidden, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        )
-
-    def forward(self, x):           # x: (batch, T, F)
-        out, (h_n, c_n) = self.rnn(x)
-        h_last = h_n[-1]            # (batch, hidden)
-        return self.classifier(h_last)
 
 
     
