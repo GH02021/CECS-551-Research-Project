@@ -10,8 +10,6 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,11 +33,8 @@ def data_create(csvfile: str):
     return X_train, y_train, X_test, y_test
 
 
-
 #define the model
-#MLP model
-
-class Fusionnet(nn.Module):
+class FusionMLP(nn.Module):
     def __init__(self, in_dim, hidden=64):
         super().__init__()
         self.net = nn.Sequential(
@@ -55,8 +50,6 @@ class Fusionnet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-
-
 
 '''#CNN model
 class Fusionnet(nn.Module):
@@ -100,10 +93,7 @@ class Fusionnet(nn.Module):
         x = x.flatten(start_dim=1)
         x = self.classifier(x)
 
-        return x'''
-
-
-    
+        return x'''    
 
 class FusionModel:
 
@@ -112,33 +102,24 @@ class FusionModel:
         self.hidden = hidden
         self.lr = lr
         self.csvf = csvfile
+        X_train, y_train, X_test, y_test = data_create(csvfile)
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
         
-        X_train, y_train, X_test, y_test = data_create(csvfile, window=5)
+        self.scaler = StandardScaler().fit(X_train)
+        X_train_scaled = self.scaler.transform(X_train)
+        X_test_scaled = self.scaler.transform(X_test)
 
-        N_train, T, F = X_train.shape
-        N_test = X_test.shape[0]
-
-        self.scaler = StandardScaler().fit(
-            X_train.reshape(-1, F)          # (N_train * T, F)
-        )
-
-        X_train_scaled = self.scaler.transform(
-            X_train.reshape(-1, F)
-        ).reshape(N_train, T, F)
-
-        X_test_scaled = self.scaler.transform(
-            X_test.reshape(-1, F)
-        ).reshape(N_test, T, F)
-        
         self.Xt = torch.from_numpy(X_train_scaled.astype("float32")).to(self.device)
         self.Yt = torch.from_numpy(y_train.astype("float32")).to(self.device)
-
         self.Xv = torch.from_numpy(X_test_scaled.astype("float32")).to(self.device)
         self.Yv = torch.from_numpy(y_test.astype("float32")).to(self.device)
 
-        _, T, F = X_train.shape
-        feature_dim = F
-        self.model = Fusionnet(feature_dim, hidden).to(self.device)
+        in_dim = X_train.shape[1]
+
+        self.model = FusionMLP(in_dim, hidden).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = nn.BCELoss()
 
