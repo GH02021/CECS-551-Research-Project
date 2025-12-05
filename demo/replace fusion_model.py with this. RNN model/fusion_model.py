@@ -40,18 +40,18 @@ def data_create(csvfile: str):
 def data_create(csvfile: str, window: int = 5):
     df = pd.read_csv(csvfile)
 
-    # 假设前两列是 Date, Ticker，最后一列是 label_up_next
+    # first two colums  Ticker, Date, last colums label_up_next
     target_col = df.columns[-1]
     ignore_cols = [df.columns[0], df.columns[1], target_col]
 
     feature_cols = [c for c in df.columns if c not in ignore_cols]
 
-    # 按 Ticker + Date 排序，保证时间顺序
+    
     df = df.sort_values([df.columns[0], df.columns[1]])  # ["Date", "Ticker"] 也可以手写
 
     X_list, y_list = [], []
 
-    # 按 ticker 分组，避免不同股票之间串窗
+    
     for _, g in df.groupby(df.columns[0]):  # 按 Ticker 分组
         g = g.reset_index(drop=True)
 
@@ -59,19 +59,19 @@ def data_create(csvfile: str, window: int = 5):
         labels = g[target_col].astype("float32").values   # (n_days,)
 
         if len(g) < window:
-            continue  # 太短就跳过
+            continue  
 
-        # 滑动窗口：每次取 window 天的序列
+        
         for i in range(window - 1, len(g)):
             X_seq = feats[i-window+1 : i+1]   # (window, F)
-            y = labels[i]                     # 用窗口最后一天的 label_up_next
+            y = labels[i]                    
             X_list.append(X_seq)
             y_list.append(y)
 
     X = np.stack(X_list).astype("float32")          # (N_samples, window, F)
     y = np.array(y_list, dtype="float32").reshape(-1, 1)
 
-    # 按时间顺序切 7:3（此时样本已经是按时间排好的）
+   
     split_idx = int(len(X) * 0.7)
     X_train, X_test = X[:split_idx], X[split_idx:]
     y_train, y_test = y[:split_idx], y[split_idx:]
@@ -228,7 +228,7 @@ class FusionModel:
             
             log = f"Epoch {epoch+1:03d} | train_loss={loss.item():.4f}"
 
-            # 简单用 test 当 val
+            
             self.model.eval()
             with torch.no_grad():
                 val_out = self.model(self.Xv)
@@ -330,4 +330,5 @@ class FusionModel:
 
         label = "UP" if p >= 0.5 else "DOWN"
         return label, float(p)
+
 
