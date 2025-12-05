@@ -12,7 +12,7 @@ def ensure_label_up_next(csv_path: str, f:bool):
             # append the column labels to be 1
             df["label_up_next"] = 1.0     # 
 
-            
+            # 确保它在最后一列（和训练集保持一致）
             cols = [c for c in df.columns if c != "label_up_next"] + ["label_up_next"]
             df = df[cols]
 
@@ -74,5 +74,4 @@ def main(csvf:str = "merged_OHLCV_Sentiment.csv", f:bool= True):
 
 if __name__ == "__main__":
     main()
-
 
